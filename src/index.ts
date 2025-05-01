@@ -40,7 +40,7 @@ app.post("/ocr/:key", async (c) => {
 
   // Prepare the OCR API payload
   const payload = {
-    model: "pixtral-large-latest",
+    model: "mistral-ocr-latest",
     document: {
       document_url: downloadUrl,
       document_name: key,
