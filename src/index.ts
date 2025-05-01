@@ -36,6 +36,13 @@ function isValidBase64(str: string) {
   return /^[A-Za-z0-9+/=\s]+$/.test(str);
 }
 
+// Helper: Strip data URL prefix if present
+function stripDataUrlPrefix(dataUrl: string): string {
+  const match = dataUrl.match(/^data:(image\/(jpeg|png|jpg));base64,(.*)$/);
+  if (match) return match[3];
+  return dataUrl;
+}
+
 // OCR endpoint: Use R2 public URL for document_url, save each page's markdown and images in R2 (jpeg, 5 pages max)
 app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
@@ -88,17 +95,20 @@ app.post("/ocr/:key", async (c) => {
       if (Array.isArray(page.images)) {
         for (let j = 0; j < page.images.length; j++) {
           const img = page.images[j];
-          if (img.image_base64 && isValidBase64(img.image_base64)) {
-            try {
-              const imageBuffer = Uint8Array.from(atob(img.image_base64), c => c.charCodeAt(0));
-              const imgKey = `${key}.page-${i + 1}.image-${j + 1}.jpeg`;
-              await c.env.MY_BUCKET.put(imgKey, imageBuffer, { httpMetadata: { contentType: "image/jpeg" } });
-            } catch (e) {
-              console.error(`Failed to decode base64 image for page ${i + 1}, image ${j + 1}:`, e);
-              continue;
+          if (img.image_base64) {
+            const base64Data = stripDataUrlPrefix(img.image_base64);
+            if (isValidBase64(base64Data)) {
+              try {
+                const imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+                const imgKey = `${key}.page-${i + 1}.image-${j + 1}.jpeg`;
+                await c.env.MY_BUCKET.put(imgKey, imageBuffer, { httpMetadata: { contentType: "image/jpeg" } });
+              } catch (e) {
+                console.error(`Failed to decode base64 image for page ${i + 1}, image ${j + 1}:`, e);
+                continue;
+              }
+            } else {
+              console.error(`Invalid base64 image for page ${i + 1}, image ${j + 1}:`, base64Data.slice(0, 32) + '...');
             }
-          } else if (img.image_base64) {
-            console.error(`Invalid base64 image for page ${i + 1}, image ${j + 1}:`, img.image_base64.slice(0, 32) + '...');
           }
         }
       }
