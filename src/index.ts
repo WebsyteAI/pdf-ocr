@@ -43,7 +43,7 @@ function stripDataUrlPrefix(dataUrl: string): string {
   return dataUrl;
 }
 
-// OCR endpoint: Use R2 public URL for document_url, save each page's markdown and images in R2 (jpeg, 5 pages max)
+// OCR endpoint: Use R2 public URL for document_url, save each page's markdown and images in R2 (jpeg, no page limit)
 app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
   const key = c.req.param("key");
@@ -53,7 +53,7 @@ app.post("/ocr/:key", async (c) => {
   // Use the R2 public URL for the document
   const downloadUrl = `${R2_PUBLIC_URL}/${encodeURIComponent(key)}`;
 
-  // Prepare the OCR API payload (limit to first 5 pages)
+  // Prepare the OCR API payload (no page limit)
   const payload = {
     model: "mistral-ocr-latest",
     document: {
@@ -61,8 +61,7 @@ app.post("/ocr/:key", async (c) => {
       document_name: key,
       type: "document_url"
     },
-    include_image_base64: true,
-    pages: [0, 1, 2, 3, 4]
+    include_image_base64: true
   };
 
   // Call Mistral OCR API
