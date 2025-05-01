@@ -26,14 +26,13 @@ app.get("/download/:key", async (c) => {
   return new Response(object.body, { headers: { "content-type": "application/octet-stream" } });
 });
 
-// OCR endpoint: Accepts PDF, sends to Mistral OCR API, returns parsed text
-app.post("/ocr", async (c) => {
+// OCR endpoint: Fetch PDF from R2 using file key, send to Mistral OCR API, return parsed text
+app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
-  const contentType = c.req.header("content-type") || "";
-  if (!contentType.includes("application/pdf")) {
-    return c.text("Please upload a PDF file.", 400);
-  }
-  const pdfBuffer = await c.req.arrayBuffer();
+  const key = c.req.param("key");
+  const object = await c.env.MY_BUCKET.get(key);
+  if (!object) return c.text("File not found in R2.", 404);
+  const pdfBuffer = await object.arrayBuffer();
 
   // Call Mistral OCR API
   const resp = await fetch("https://api.mistral.ai/v1/ocr", {
