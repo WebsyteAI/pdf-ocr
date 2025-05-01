@@ -29,7 +29,7 @@ app.get("/download/:key", async (c) => {
   return new Response(object.body, { headers: { "content-type": "application/pdf" } });
 });
 
-// OCR endpoint: Use R2 public URL for document_url, save each page as JSON in R2
+// OCR endpoint: Use R2 public URL for document_url, save each page's markdown and images in R2
 app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
   const key = c.req.param("key");
@@ -67,12 +67,27 @@ app.post("/ocr/:key", async (c) => {
 
   const data = await resp.json();
 
-  // Save each page as a JSON file in R2
+  // For every page, save markdown and images as separate files in R2
   if (Array.isArray(data.pages)) {
     for (let i = 0; i < data.pages.length; i++) {
-      const pageJson = JSON.stringify(data.pages[i], null, 2);
-      const pageKey = `${key}.page-${i + 1}.json`;
-      await c.env.MY_BUCKET.put(pageKey, pageJson, { httpMetadata: { contentType: "application/json" } });
+      const page = data.pages[i];
+      // Save markdown
+      if (page.markdown) {
+        const mdKey = `${key}.page-${i + 1}.md`;
+        await c.env.MY_BUCKET.put(mdKey, page.markdown, { httpMetadata: { contentType: "text/markdown" } });
+      }
+      // Save images
+      if (Array.isArray(page.images)) {
+        for (let j = 0; j < page.images.length; j++) {
+          const img = page.images[j];
+          if (img.image_base64) {
+            // Try to detect image type, default to png
+            const imageBuffer = Uint8Array.from(atob(img.image_base64), c => c.charCodeAt(0));
+            const imgKey = `${key}.page-${i + 1}.image-${j + 1}.png`;
+            await c.env.MY_BUCKET.put(imgKey, imageBuffer, { httpMetadata: { contentType: "image/png" } });
+          }
+        }
+      }
     }
   }
 
