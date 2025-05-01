@@ -4,7 +4,7 @@
   "compatibility_date": "2025-03-07",
   "compatibility_flags": ["nodejs_compat"],
   "r2_buckets": [
-    { "binding": "MY_BUCKET", "bucket_name": "my-bucket" }
+    { "binding": "MY_BUCKET", "bucket_name": "websyte-ai-scrom-db" }
   ],
   "observability": { "enabled": true }
 }
