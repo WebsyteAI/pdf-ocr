@@ -93,9 +93,11 @@ app.post("/ocr/:key", async (c) => {
               const imgKey = `${key}.page-${i + 1}.image-${j + 1}.png`;
               await c.env.MY_BUCKET.put(imgKey, imageBuffer, { httpMetadata: { contentType: "image/png" } });
             } catch (e) {
-              // Skip invalid base64 images
+              console.error(`Failed to decode base64 image for page ${i + 1}, image ${j + 1}:`, e);
               continue;
             }
+          } else if (img.image_base64) {
+            console.error(`Invalid base64 image for page ${i + 1}, image ${j + 1}:`, img.image_base64.slice(0, 32) + '...');
           }
         }
       }
