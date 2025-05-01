@@ -36,7 +36,7 @@ function isValidBase64(str: string) {
   return /^[A-Za-z0-9+/=\s]+$/.test(str);
 }
 
-// OCR endpoint: Use R2 public URL for document_url, save each page's markdown and images in R2
+// OCR endpoint: Use R2 public URL for document_url, save each page's markdown and images in R2 (jpeg, 5 pages max)
 app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
   const key = c.req.param("key");
@@ -46,7 +46,7 @@ app.post("/ocr/:key", async (c) => {
   // Use the R2 public URL for the document
   const downloadUrl = `${R2_PUBLIC_URL}/${encodeURIComponent(key)}`;
 
-  // Prepare the OCR API payload
+  // Prepare the OCR API payload (limit to first 5 pages)
   const payload = {
     model: "mistral-ocr-latest",
     document: {
@@ -54,7 +54,8 @@ app.post("/ocr/:key", async (c) => {
       document_name: key,
       type: "document_url"
     },
-    include_image_base64: true
+    include_image_base64: true,
+    pages: [0, 1, 2, 3, 4]
   };
 
   // Call Mistral OCR API
@@ -74,7 +75,7 @@ app.post("/ocr/:key", async (c) => {
 
   const data = await resp.json();
 
-  // For every page, save markdown and images as separate files in R2
+  // For every page, save markdown and images as separate files in R2 (jpeg)
   if (Array.isArray(data.pages)) {
     for (let i = 0; i < data.pages.length; i++) {
       const page = data.pages[i];
@@ -83,15 +84,15 @@ app.post("/ocr/:key", async (c) => {
         const mdKey = `${key}.page-${i + 1}.md`;
         await c.env.MY_BUCKET.put(mdKey, page.markdown, { httpMetadata: { contentType: "text/markdown" } });
       }
-      // Save images
+      // Save images as jpeg
       if (Array.isArray(page.images)) {
         for (let j = 0; j < page.images.length; j++) {
           const img = page.images[j];
           if (img.image_base64 && isValidBase64(img.image_base64)) {
             try {
               const imageBuffer = Uint8Array.from(atob(img.image_base64), c => c.charCodeAt(0));
-              const imgKey = `${key}.page-${i + 1}.image-${j + 1}.png`;
-              await c.env.MY_BUCKET.put(imgKey, imageBuffer, { httpMetadata: { contentType: "image/png" } });
+              const imgKey = `${key}.page-${i + 1}.image-${j + 1}.jpeg`;
+              await c.env.MY_BUCKET.put(imgKey, imageBuffer, { httpMetadata: { contentType: "image/jpeg" } });
             } catch (e) {
               console.error(`Failed to decode base64 image for page ${i + 1}, image ${j + 1}:`, e);
               continue;
