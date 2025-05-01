@@ -6,6 +6,8 @@ export type Env = {
   MISTRAL_OCR_API_KEY: string;
 };
 
+const R2_PUBLIC_URL = "https://pub-8e8f33484ec948a2bc5d784574d78e6b.r2.dev";
+
 const app = new Hono<{ Bindings: Env }>();
 
 app.get("/", (c: Context) => c.text("Hello from Worker with R2!"));
@@ -26,28 +28,35 @@ app.get("/download/:key", async (c) => {
   return new Response(object.body, { headers: { "content-type": "application/pdf" } });
 });
 
-// OCR endpoint: Fetch PDF from R2 using file key, send raw document to Mistral OCR API, support base64 images in response
+// OCR endpoint: Use R2 public URL for document_url
 app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
   const key = c.req.param("key");
   const object = await c.env.MY_BUCKET.get(key);
   if (!object) return c.text("File not found in R2.", 404);
-  const pdfBuffer = await object.arrayBuffer();
 
-  // Prepare the multipart/form-data body
-  const formData = new FormData();
-  formData.append("model", "mistral-ocr-large"); // Use the correct model name if needed
-  formData.append("document", new Blob([pdfBuffer], { type: "application/pdf" }), key);
-  formData.append("include_image_base64", "true");
+  // Use the R2 public URL for the document
+  const downloadUrl = `${R2_PUBLIC_URL}/${encodeURIComponent(key)}`;
+
+  // Prepare the OCR API payload
+  const payload = {
+    model: "mistral-ocr-large",
+    document: {
+      document_url: downloadUrl,
+      document_name: key,
+      type: "document_url"
+    },
+    include_image_base64: true
+  };
 
   // Call Mistral OCR API
   const resp = await fetch("https://api.mistral.ai/v1/ocr", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`
-      // Content-Type will be set automatically by FormData
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
     },
-    body: formData
+    body: JSON.stringify(payload)
   });
 
   if (!resp.ok) {
