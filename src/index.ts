@@ -32,16 +32,30 @@ app.post("/ocr/:key", async (c) => {
   const key = c.req.param("key");
   const object = await c.env.MY_BUCKET.get(key);
   if (!object) return c.text("File not found in R2.", 404);
-  const pdfBuffer = await object.arrayBuffer();
 
-  // Call Mistral OCR API
+  // Generate a presigned URL for the PDF in R2 (publicly accessible for Mistral OCR API)
+  // If presigned URLs are not available, you must serve the file from your Worker
+  // We'll serve the file from the Worker and provide a temporary URL
+  // For now, let's assume the Worker is public and construct the download URL
+  const downloadUrl = `${c.req.url.replace(/\/ocr\/.*/, '')}/download/${encodeURIComponent(key)}`;
+
+  // Prepare the OCR API payload
+  const payload = {
+    model: "mistral-ocr-large", // Replace with the correct model name if needed
+    document: {
+      document_url: downloadUrl,
+      document_name: key,
+      type: "document_url"
+    }
+  };
+
   const resp = await fetch("https://api.mistral.ai/v1/ocr", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/pdf"
+      "Content-Type": "application/json"
     },
-    body: pdfBuffer
+    body: JSON.stringify(payload)
   });
 
   if (!resp.ok) {
@@ -49,9 +63,8 @@ app.post("/ocr/:key", async (c) => {
     return c.text(`Mistral OCR API error: ${err}`, 502);
   }
 
-  // Assume the API returns JSON with a 'text' field
   const data = await resp.json();
-  return c.json({ text: data.text });
+  return c.json(data);
 });
 
 export default app;
