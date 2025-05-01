@@ -23,39 +23,31 @@ app.get("/download/:key", async (c) => {
   const key = c.req.param("key");
   const object = await c.env.MY_BUCKET.get(key);
   if (!object) return c.notFound();
-  return new Response(object.body, { headers: { "content-type": "application/octet-stream" } });
+  return new Response(object.body, { headers: { "content-type": "application/pdf" } });
 });
 
-// OCR endpoint: Fetch PDF from R2 using file key, send to Mistral OCR API, return parsed text
+// OCR endpoint: Fetch PDF from R2 using file key, send raw document to Mistral OCR API, support base64 images in response
 app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
   const key = c.req.param("key");
   const object = await c.env.MY_BUCKET.get(key);
   if (!object) return c.text("File not found in R2.", 404);
+  const pdfBuffer = await object.arrayBuffer();
 
-  // Generate a presigned URL for the PDF in R2 (publicly accessible for Mistral OCR API)
-  // If presigned URLs are not available, you must serve the file from your Worker
-  // We'll serve the file from the Worker and provide a temporary URL
-  // For now, let's assume the Worker is public and construct the download URL
-  const downloadUrl = `${c.req.url.replace(/\/ocr\/.*/, '')}/download/${encodeURIComponent(key)}`;
+  // Prepare the multipart/form-data body
+  const formData = new FormData();
+  formData.append("model", "mistral-ocr-large"); // Use the correct model name if needed
+  formData.append("document", new Blob([pdfBuffer], { type: "application/pdf" }), key);
+  formData.append("include_image_base64", "true");
 
-  // Prepare the OCR API payload
-  const payload = {
-    model: "mistral-ocr-large", // Replace with the correct model name if needed
-    document: {
-      document_url: downloadUrl,
-      document_name: key,
-      type: "document_url"
-    }
-  };
-
+  // Call Mistral OCR API
   const resp = await fetch("https://api.mistral.ai/v1/ocr", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
+      "Authorization": `Bearer ${apiKey}`
+      // Content-Type will be set automatically by FormData
     },
-    body: JSON.stringify(payload)
+    body: formData
   });
 
   if (!resp.ok) {
