@@ -28,7 +28,7 @@ app.get("/download/:key", async (c) => {
   return new Response(object.body, { headers: { "content-type": "application/pdf" } });
 });
 
-// OCR endpoint: Use R2 public URL for document_url
+// OCR endpoint: Use R2 public URL for document_url, save each page as JSON in R2
 app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
   const key = c.req.param("key");
@@ -65,6 +65,16 @@ app.post("/ocr/:key", async (c) => {
   }
 
   const data = await resp.json();
+
+  // Save each page as a JSON file in R2
+  if (Array.isArray(data.pages)) {
+    for (let i = 0; i < data.pages.length; i++) {
+      const pageJson = JSON.stringify(data.pages[i], null, 2);
+      const pageKey = `${key}.page-${i + 1}.json`;
+      await c.env.MY_BUCKET.put(pageKey, pageJson, { httpMetadata: { contentType: "application/json" } });
+    }
+  }
+
   return c.json(data);
 });
 
