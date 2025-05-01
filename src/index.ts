@@ -4,6 +4,7 @@ import type { Context } from "hono";
 export type Env = {
   MY_BUCKET: R2Bucket;
   MISTRAL_OCR_API_KEY: string;
+  AI: any;
 };
 
 const R2_PUBLIC_URL = "https://pub-8e8f33484ec948a2bc5d784574d78e6b.r2.dev";
@@ -76,6 +77,14 @@ app.post("/ocr/:key", async (c) => {
   }
 
   return c.json(data);
+});
+
+// Autorag endpoint: POST /autorag { query: string }
+app.post("/autorag", async (c) => {
+  const { query } = await c.req.json();
+  if (!query) return c.text("Missing query", 400);
+  const answer = await c.env.AI.autorag("airbus_a350").aiSearch({ query });
+  return c.json(answer);
 });
 
 export default app;
