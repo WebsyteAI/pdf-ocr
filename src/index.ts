@@ -29,6 +29,13 @@ app.get("/download/:key", async (c) => {
   return new Response(object.body, { headers: { "content-type": "application/pdf" } });
 });
 
+// Helper: Validate base64 string
+function isValidBase64(str: string) {
+  if (!str || typeof str !== "string" || str.length < 8) return false;
+  // Basic base64 regex (not strict, but avoids obvious errors)
+  return /^[A-Za-z0-9+/=\s]+$/.test(str);
+}
+
 // OCR endpoint: Use R2 public URL for document_url, save each page's markdown and images in R2
 app.post("/ocr/:key", async (c) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
@@ -80,11 +87,15 @@ app.post("/ocr/:key", async (c) => {
       if (Array.isArray(page.images)) {
         for (let j = 0; j < page.images.length; j++) {
           const img = page.images[j];
-          if (img.image_base64) {
-            // Try to detect image type, default to png
-            const imageBuffer = Uint8Array.from(atob(img.image_base64), c => c.charCodeAt(0));
-            const imgKey = `${key}.page-${i + 1}.image-${j + 1}.png`;
-            await c.env.MY_BUCKET.put(imgKey, imageBuffer, { httpMetadata: { contentType: "image/png" } });
+          if (img.image_base64 && isValidBase64(img.image_base64)) {
+            try {
+              const imageBuffer = Uint8Array.from(atob(img.image_base64), c => c.charCodeAt(0));
+              const imgKey = `${key}.page-${i + 1}.image-${j + 1}.png`;
+              await c.env.MY_BUCKET.put(imgKey, imageBuffer, { httpMetadata: { contentType: "image/png" } });
+            } catch (e) {
+              // Skip invalid base64 images
+              continue;
+            }
           }
         }
       }
