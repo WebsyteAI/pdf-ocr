@@ -58,7 +58,7 @@ form.addEventListener('submit', async (e) => {
       done = doneReading;
       if (value) {
         buffer += decoder.decode(value, { stream: true });
-        let parts = buffer.split(/\n+/); // <-- This should be /\n+/ in the source, but will be rendered as /n+/ in HTML
+        let parts = buffer.split(/\n+/); // <-- This is the problem
         buffer = parts.pop() || '';
         for (const part of parts) {
           if (part.startsWith('data:')) {
@@ -76,7 +76,7 @@ form.addEventListener('submit', async (e) => {
   input.focus();
 });
 </script>
-      `}
+      `.replace('buffer.split(/\n+/);', 'buffer.split(/\n+/);'.replace(/\\n/g, '\n'))}
     </body>
   </html>
 );
