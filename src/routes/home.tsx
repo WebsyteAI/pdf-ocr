@@ -58,7 +58,7 @@ const page = () => (
                 done = doneReading;
                 if (value) {
                   buffer += decoder.decode(value, { stream: true });
-                  let parts = buffer.split(/\n+/);
+                  let parts = buffer.split(/\n+/); // <-- FIX HERE
                   buffer = parts.pop() || '';
                   for (const part of parts) {
                     if (part.startsWith('data:')) {
@@ -76,7 +76,7 @@ const page = () => (
             input.focus();
           });
         </script>
-      `}
+      `.replace(/\\n/g, '\n')}
     </body>
   </html>
 );
