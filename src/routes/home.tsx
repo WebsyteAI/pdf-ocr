@@ -57,16 +57,16 @@ const page = () => (
     <body class="bg-gray-100 min-h-screen flex items-center justify-center">
       <div x-data class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md p-6">
         <h1 class="text-2xl font-bold mb-4 text-center">PDF OCR Chat</h1>
-        <div class="mb-4 min-h-[2rem] text-gray-700" x-text="$store.chat.message"></div>
+        <div class="mb-4 min-h-[2rem] text-gray-700" {...{"x-text": "$store.chat.message"}}></div>
         <form
-          x-on:submit.prevent="$store.chat.sendMessage()"
+          {...{"x-on:submit.prevent": "$store.chat.sendMessage()"}}
           class="flex gap-2"
         >
           <input
             type="text"
             class="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400"
             placeholder="Type your message..."
-            x-model="$store.chat.input"
+            {...{"x-model": "$store.chat.input"}}
             required
           />
           <button
