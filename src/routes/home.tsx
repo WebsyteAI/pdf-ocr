@@ -8,15 +8,15 @@ const page = (props: { message?: string }) => (
       <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     </head>
     <body class="bg-gray-100 min-h-screen flex items-center justify-center">
-      <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md p-6" x-data="chatApp()">
+      <div {...{"x-data": "chatApp()"}} class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md p-6">
         <h1 class="text-2xl font-bold mb-4 text-center">PDF OCR Chat</h1>
-        <div class="mb-4 min-h-[2rem] text-gray-700" x-text="message"></div>
-        <form x-on:submit.prevent="sendMessage" class="flex gap-2">
+        <div class="mb-4 min-h-[2rem] text-gray-700" {...{"x-text": "message"}}></div>
+        <form {...{"x-on:submit.prevent": "sendMessage"}} class="flex gap-2">
           <input
             type="text"
             class="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400"
             placeholder="Type your message..."
-            x-model="input"
+            {...{"x-model": "input"}}
             required
           />
           <button
