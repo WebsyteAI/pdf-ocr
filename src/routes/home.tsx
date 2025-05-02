@@ -1,6 +1,6 @@
 import { html } from 'hono/html';
 
-const page = (props: { message?: string }) => (
+const page = () => (
   <html>
     <head>
       <meta charSet="UTF-8" />
@@ -8,31 +8,10 @@ const page = (props: { message?: string }) => (
       <title>PDF OCR Chat</title>
       <script src="https://cdn.tailwindcss.com"></script>
       <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    </head>
-    <body class="bg-gray-100 min-h-screen flex items-center justify-center">
-      <div {...{"x-data": "chatApp()"}} class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md p-6">
-        <h1 class="text-2xl font-bold mb-4 text-center">PDF OCR Chat</h1>
-        <div class="mb-4 min-h-[2rem] text-gray-700" {...{"x-text": "message"}}></div>
-        <form {...{"x-on:submit.prevent": "sendMessage"}} class="flex gap-2">
-          <input
-            type="text"
-            class="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400"
-            placeholder="Type your message..."
-            {...{"x-model": "input"}}
-            required
-          />
-          <button
-            type="submit"
-            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-          >
-            Send
-          </button>
-        </form>
-      </div>
       {html`
         <script>
-          function chatApp() {
-            return {
+          document.addEventListener('alpine:init', () => {
+            Alpine.store('chat', {
               input: '',
               message: '',
               async sendMessage() {
@@ -53,7 +32,6 @@ const page = (props: { message?: string }) => (
                     done = doneReading;
                     if (value) {
                       buffer += decoder.decode(value, { stream: true });
-                      // Split on newlines for SSE
                       let parts = buffer.split(/\n+/);
                       buffer = parts.pop() || '';
                       for (const part of parts) {
@@ -71,10 +49,34 @@ const page = (props: { message?: string }) => (
                 this.message = typeof data === 'string' ? data : (data?.answer || JSON.stringify(data));
                 this.input = '';
               }
-            }
-          }
+            });
+          });
         </script>
       `}
+    </head>
+    <body class="bg-gray-100 min-h-screen flex items-center justify-center">
+      <div x-data class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-4 text-center">PDF OCR Chat</h1>
+        <div class="mb-4 min-h-[2rem] text-gray-700" x-text="$store.chat.message"></div>
+        <form
+          x-on:submit.prevent="$store.chat.sendMessage()"
+          class="flex gap-2"
+        >
+          <input
+            type="text"
+            class="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400"
+            placeholder="Type your message..."
+            x-model="$store.chat.input"
+            required
+          />
+          <button
+            type="submit"
+            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+          >
+            Send
+          </button>
+        </form>
+      </div>
     </body>
   </html>
 );
