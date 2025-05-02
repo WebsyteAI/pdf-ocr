@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "./types";
-import root from "./routes/root";
+import home from "./routes/home";
 import upload from "./routes/upload";
 import download from "./routes/download";
 import ocr from "./routes/ocr";
@@ -8,9 +8,8 @@ import autorag from "./routes/autorag";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Instead of app.route, use app.get, app.post, etc. directly
-// Root
-app.get("/", root);
+// Home
+app.get("/", home);
 
 // Upload
 app.post("/upload/:key", upload);
