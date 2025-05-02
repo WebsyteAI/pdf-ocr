@@ -1,3 +1,5 @@
+import { html } from 'hono/html';
+
 const page = (props: { message?: string }) => (
   <html>
     <head>
@@ -27,25 +29,27 @@ const page = (props: { message?: string }) => (
           </button>
         </form>
       </div>
-      <script>
-        function chatApp() {
-          return {
-            input: '',
-            message: '',
-            async sendMessage() {
-              if (!this.input) return;
-              const res = await fetch('/autorag', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: this.input })
-              });
-              const data = await res.json();
-              this.message = typeof data === 'string' ? data : (data?.answer || JSON.stringify(data));
-              this.input = '';
+      {html`
+        <script>
+          function chatApp() {
+            return {
+              input: '',
+              message: '',
+              async sendMessage() {
+                if (!this.input) return;
+                const res = await fetch('/autorag', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ query: this.input })
+                });
+                const data = await res.json();
+                this.message = typeof data === 'string' ? data : (data?.answer || JSON.stringify(data));
+                this.input = '';
+              }
             }
           }
-        }
-      </script>
+        </script>
+      `}
     </body>
   </html>
 );
