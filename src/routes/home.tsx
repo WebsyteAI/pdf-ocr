@@ -52,19 +52,17 @@ form.addEventListener('submit', async (e) => {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let done = false;
-    let buffer = '';
     while (!done) {
       const { value, done: doneReading } = await reader.read();
       done = doneReading;
       if (value) {
-        buffer += decoder.decode(value, { stream: true });
-        let parts = buffer.split(/\n+/);
-        buffer = parts.pop() || '';
-        for (const part of parts) {
-          if (part.startsWith('data:')) {
-            messageDiv.textContent += part.slice(5).trim();
+        const chunk = decoder.decode(value, { stream: true });
+        // Append all 'data:' lines in the chunk
+        chunk.split('\n').forEach(line => {
+          if (line.startsWith('data:')) {
+            messageDiv.textContent += line.slice(5).trim();
           }
-        }
+        });
       }
     }
   } else {
