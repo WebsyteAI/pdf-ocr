@@ -58,7 +58,7 @@ form.addEventListener('submit', async (e) => {
       if (value) {
         const chunk = decoder.decode(value, { stream: true });
         // Append all 'data:' lines in the chunk
-        chunk.split('\n').forEach(line => {
+        chunk.split('\\n').forEach(line => {
           if (line.startsWith('data:')) {
             messageDiv.textContent += line.slice(5).trim();
           }
