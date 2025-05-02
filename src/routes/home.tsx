@@ -37,11 +37,36 @@ const page = (props: { message?: string }) => (
               message: '',
               async sendMessage() {
                 if (!this.input) return;
+                this.message = '';
                 const res = await fetch('/autorag', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ query: this.input })
                 });
+                if (res.headers.get('content-type')?.includes('text/event-stream')) {
+                  const reader = res.body.getReader();
+                  const decoder = new TextDecoder();
+                  let done = false;
+                  let buffer = '';
+                  while (!done) {
+                    const { value, done: doneReading } = await reader.read();
+                    done = doneReading;
+                    if (value) {
+                      buffer += decoder.decode(value, { stream: true });
+                      // Split on newlines for SSE
+                      let parts = buffer.split(/\n+/);
+                      buffer = parts.pop() || '';
+                      for (const part of parts) {
+                        if (part.startsWith('data:')) {
+                          this.message += part.slice(5).trim();
+                        }
+                      }
+                    }
+                  }
+                  this.input = '';
+                  return;
+                }
+                // fallback: not a stream
                 const data = await res.json();
                 this.message = typeof data === 'string' ? data : (data?.answer || JSON.stringify(data));
                 this.input = '';
