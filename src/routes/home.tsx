@@ -58,7 +58,7 @@ form.addEventListener('submit', async (e) => {
       done = doneReading;
       if (value) {
         buffer += decoder.decode(value, { stream: true });
-        let parts = buffer.split(/\n+/);
+        let parts = buffer.split(/\n+/); // <-- This should be /\n+/ in the source, but will be rendered as /n+/ in HTML
         buffer = parts.pop() || '';
         for (const part of parts) {
           if (part.startsWith('data:')) {
