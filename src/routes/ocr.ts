@@ -1,11 +1,10 @@
-import { Hono } from "hono";
 import type { Env } from "../types";
 import { isValidBase64, stripDataUrlPrefix } from "../utils/base64";
 
 const R2_PUBLIC_URL = "https://pub-8e8f33484ec948a2bc5d784574d78e6b.r2.dev";
 
-const ocr = new Hono<{ Bindings: Env }>();
-ocr.post("/ocr/:key", async (c) => {
+// Handler for POST /ocr/:key
+export default async (c: any) => {
   const apiKey = c.env.MISTRAL_OCR_API_KEY;
   const key = c.req.param("key");
   const object = await c.env.MY_BUCKET.get(key);
@@ -69,5 +68,4 @@ ocr.post("/ocr/:key", async (c) => {
   }
 
   return c.json(data);
-});
-export default ocr;
+};

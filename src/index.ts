@@ -8,10 +8,20 @@ import autorag from "./routes/autorag";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.route("/", root);
-app.route("/", upload);
-app.route("/", download);
-app.route("/", ocr);
-app.route("/", autorag);
+// Instead of app.route, use app.get, app.post, etc. directly
+// Root
+app.get("/", root);
+
+// Upload
+app.post("/upload/:key", upload);
+
+// Download
+app.get("/download/:key", download);
+
+// OCR
+app.post("/ocr/:key", ocr);
+
+// Autorag
+app.post("/autorag", autorag);
 
 export default app;
