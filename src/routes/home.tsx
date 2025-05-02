@@ -48,10 +48,30 @@ form.addEventListener('submit', async (e) => {
     body: JSON.stringify({ query })
   });
 
-  // Only handle non-streaming response
-  const data = await res.json();
-  messageDiv.textContent = typeof data === 'string' ? data : (data?.answer || JSON.stringify(data));
-
+  if (res.headers.get('content-type')?.includes('text/event-stream')) {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let done = false;
+    let buffer = '';
+    while (!done) {
+      const { value, done: doneReading } = await reader.read();
+      done = doneReading;
+      if (value) {
+        buffer += decoder.decode(value, { stream: true });
+        let parts = buffer.split(/\n+/);
+        buffer = parts.pop() || '';
+        for (const part of parts) {
+          if (part.startsWith('data:')) {
+            messageDiv.textContent += part.slice(5).trim();
+          }
+        }
+      }
+    }
+  } else {
+    // fallback: not a stream
+    const data = await res.json();
+    messageDiv.textContent = typeof data === 'string' ? data : (data?.answer || JSON.stringify(data));
+  }
   input.disabled = false;
   input.focus();
 });
