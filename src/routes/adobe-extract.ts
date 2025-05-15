@@ -108,7 +108,10 @@ export default async (c: any) => {
   }
 
   // Step 6: Download the result (usually a zip)
-  const downloadUri = pollData.downloadUri;
+  let downloadUri = pollData.downloadUri;
+  if (!downloadUri && pollData.content && pollData.content.downloadUri) {
+    downloadUri = pollData.content.downloadUri;
+  }
   if (!downloadUri) return c.json({ step: "download", error: "No downloadUri in Adobe response.", pollData }, 502);
   const resultResp = await fetch(downloadUri);
   const resultRespText = await resultResp.text();
