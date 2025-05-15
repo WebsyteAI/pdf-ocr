@@ -19,7 +19,7 @@ export default async (c: any) => {
   });
   if (!tokenResp.ok) {
     const err = await tokenResp.text();
-    return c.text(`Adobe token error: ${err}`, 502);
+    return c.json({ step: "token", error: err, status: tokenResp.status }, 502);
   }
   const { access_token } = await tokenResp.json();
 
@@ -33,11 +33,18 @@ export default async (c: any) => {
     },
     body: JSON.stringify({ mediaType: "application/pdf" }),
   });
-  if (!assetResp.ok) {
-    const err = await assetResp.text();
-    return c.text(`Adobe asset error: ${err}`, 502);
+  const assetRespText = await assetResp.text();
+  let uploadUri, assetID;
+  try {
+    const assetJson = JSON.parse(assetRespText);
+    uploadUri = assetJson.uploadUri;
+    assetID = assetJson.assetID;
+  } catch (e) {
+    return c.json({ step: "asset", error: assetRespText, status: assetResp.status }, 502);
   }
-  const { uploadUri, assetID } = await assetResp.json();
+  if (!assetResp.ok) {
+    return c.json({ step: "asset", error: assetRespText, status: assetResp.status }, 502);
+  }
 
   // Step 3: Upload PDF to Adobe's S3
   const putResp = await fetch(uploadUri, {
@@ -45,9 +52,9 @@ export default async (c: any) => {
     headers: { "Content-Type": "application/pdf" },
     body: object.body,
   });
+  const putRespText = await putResp.text();
   if (!putResp.ok) {
-    const err = await putResp.text();
-    return c.text(`Adobe upload error: ${err}`, 502);
+    return c.json({ step: "upload", error: putRespText, status: putResp.status, uploadUri }, 502);
   }
 
   // Step 4: Create extract job
@@ -66,13 +73,13 @@ export default async (c: any) => {
       },
     }),
   });
+  const jobRespText = await jobResp.text();
   if (!jobResp.ok) {
-    const err = await jobResp.text();
-    return c.text(`Adobe job error: ${err}`, 502);
+    return c.json({ step: "job", error: jobRespText, status: jobResp.status, assetID }, 502);
   }
   // The job location is in the Location header
   const jobLocation = jobResp.headers.get("location");
-  if (!jobLocation) return c.text("No job location returned from Adobe.", 502);
+  if (!jobLocation) return c.json({ step: "job", error: "No job location returned from Adobe.", jobRespText }, 502);
 
   // Step 5: Poll for job completion
   let status = "in progress";
@@ -90,18 +97,18 @@ export default async (c: any) => {
     if (status === "done" || status === "failed") break;
   }
   if (status !== "done") {
-    return c.json({ error: "Adobe extract job did not complete", status, pollData }, 502);
+    return c.json({ step: "poll", error: "Adobe extract job did not complete", status, pollData }, 502);
   }
 
   // Step 6: Download the result (usually a zip)
   const downloadUri = pollData.downloadUri;
-  if (!downloadUri) return c.text("No downloadUri in Adobe response.", 502);
+  if (!downloadUri) return c.json({ step: "download", error: "No downloadUri in Adobe response.", pollData }, 502);
   const resultResp = await fetch(downloadUri);
+  const resultRespText = await resultResp.text();
   if (!resultResp.ok) {
-    const err = await resultResp.text();
-    return c.text(`Adobe result download error: ${err}`, 502);
+    return c.json({ step: "result", error: resultRespText, status: resultResp.status, downloadUri }, 502);
   }
-  const resultBuffer = await resultResp.arrayBuffer();
+  const resultBuffer = new Uint8Array(await (await fetch(downloadUri)).arrayBuffer());
   const resultKey = `${key}.adobe-extract.zip`;
   await c.env.MY_BUCKET.put(resultKey, resultBuffer, {
     httpMetadata: { contentType: "application/zip" },
