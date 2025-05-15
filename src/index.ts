@@ -5,6 +5,7 @@ import upload from "./routes/upload";
 import download from "./routes/download";
 import ocr from "./routes/ocr";
 import autorag from "./routes/autorag";
+import adobeExtract from "./routes/adobe-extract";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -22,5 +23,8 @@ app.post("/ocr/:key", ocr);
 
 // Autorag
 app.post("/autorag", autorag);
+
+// Adobe Extract
+app.post("/adobe-extract/:key", adobeExtract);
 
 export default app;
