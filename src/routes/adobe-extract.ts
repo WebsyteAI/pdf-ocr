@@ -57,6 +57,9 @@ export default async (c: any) => {
     return c.json({ step: "upload", error: putRespText, status: putResp.status, uploadUri }, 502);
   }
 
+  // Step 3.5: Wait for asset to be available
+  await new Promise((r) => setTimeout(r, 2000)); // 2 second delay
+
   // Step 4: Create extract job
   const jobResp = await fetch("https://pdf-services.adobe.io/operation/extractpdf/jobs", {
     method: "POST",
@@ -75,7 +78,7 @@ export default async (c: any) => {
   });
   const jobRespText = await jobResp.text();
   if (!jobResp.ok) {
-    return c.json({ step: "job", error: jobRespText, status: jobResp.status, assetID }, 502);
+    return c.json({ step: "job", error: jobRespText, status: jobResp.status, assetID, uploadUri, putRespText }, 502);
   }
   // The job location is in the Location header
   const jobLocation = jobResp.headers.get("location");
