@@ -114,11 +114,11 @@ export default async (c: any) => {
   }
   if (!downloadUri) return c.json({ step: "download", error: "No downloadUri in Adobe response.", pollData }, 502);
   const resultResp = await fetch(downloadUri);
-  const resultRespText = await resultResp.text();
   if (!resultResp.ok) {
-    return c.json({ step: "result", error: resultRespText, status: resultResp.status, downloadUri }, 502);
+    const errorText = await resultResp.text();
+    return c.json({ step: "result", error: errorText, status: resultResp.status, downloadUri }, 502);
   }
-  const resultBuffer = new Uint8Array(await (await fetch(downloadUri)).arrayBuffer());
+  const resultBuffer = new Uint8Array(await resultResp.arrayBuffer());
   const resultKey = `${key}.adobe-extract.zip`;
   await c.env.MY_BUCKET.put(resultKey, resultBuffer, {
     httpMetadata: { contentType: "application/zip" },
