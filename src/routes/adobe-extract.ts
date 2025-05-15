@@ -60,21 +60,25 @@ export default async (c: any) => {
   // Step 3.5: Wait for asset to be available
   await new Promise((r) => setTimeout(r, 2000)); // 2 second delay
 
-  // Step 4: Create extract job
-  const jobResp = await fetch("https://pdf-services.adobe.io/operation/extractpdf/jobs", {
+  // Step 4: Create extract job (correct endpoint and payload)
+  const extractPayload = {
+    assetID,
+    getCharBounds: false,
+    includeStyling: false,
+    elementsToExtract: ["text", "tables"],
+    tableOutputFormat: "xlsx",
+    renditionsToExtract: ["tables", "figures"],
+    includeHeaderFooter: false,
+    tagEncapsulatedText: ["Figure"]
+  };
+  const jobResp = await fetch("https://pdf-services.adobe.io/operation/extractpdf", {
     method: "POST",
     headers: {
       "X-API-Key": clientId,
       Authorization: `Bearer ${access_token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      assetID,
-      options: {
-        elementsToExtract: ["text", "tables", "images"],
-        includeStyling: true,
-      },
-    }),
+    body: JSON.stringify(extractPayload),
   });
   const jobRespText = await jobResp.text();
   if (!jobResp.ok) {
